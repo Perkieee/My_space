@@ -226,7 +226,7 @@ class HailoInfer:
         bindings_list = self.create_bindings(self.configured_model, input_batch)
     
         # Run inference (blocking call)
-        self.configured_model.run(bindings_list,timeout_ms=10000)
+        self.configured_model.run(bindings_list,timeout=10000)
     
         # Collect and return results
         outputs = self._extract_outputs(bindings_list)
