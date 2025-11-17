@@ -90,8 +90,9 @@ class Metrics(object):
             self.train_history = json.load(infile)
 
     def new_epoch(self):
-        self.epoch = +1
-        self.__save_epoch_history()
+        self.epoch += 1
+        if self.epoch_history is not None:
+            self.__save_epoch_history()
         self.epoch_history = new_history()
 
     def register_batch(self, acc, loss):
@@ -101,6 +102,14 @@ class Metrics(object):
         if self.step == TrainingStep.VAL_EPOCH or self.step == TrainingStep.EVALUATION:
             self.epoch_history[METRIC_VAL_ACCURACY].append(acc)
             self.epoch_history[METRIC_VAL_LOSS].append(loss)
+
+    def current_epoch_metric(self):
+        """Return average accuracy and loss for the current epoch."""
+        if not self.epoch_history:
+            return {"acc": 0.0, "loss": 0.0}
+        acc = sum(self.epoch_history["accuracy"]) / len(self.epoch_history["accuracy"])
+        loss = sum(self.epoch_history["loss"]) / len(self.epoch_history["loss"])
+        return {"acc": acc, "loss": loss}
 
     @staticmethod
     def __mean(bag: dict, metrics_id: MetricsType):
