@@ -51,8 +51,56 @@ class HailoWrapper:
                 self.model.close()
             except Exception as e:
                 self.logger.warning("Error closing Hailo: %s", e)
+    def inference_callback(self, infer_results=None, bindings_list=None, **kwargs):
+        """
+        Pure inference callback for Hailo run_async().
+        - Reads output buffers
+        - Applies softmax
+        - Extracts top-1 + top-5 predictions
+        - Logs prediction summary
+        """
 
-    def submit_batch(self, frames: List[np.ndarray], metas: List[Dict], callback_fn):
+        if bindings_list is None:
+            self.logger.warning("No bindings_list received in callback.")
+            return
+
+        for info in bindings_list:
+            binding = info.get("binding")
+
+            try:
+                output_buffers = binding.output().get_buffer()
+            except Exception as e:
+                self.logger.error(f"Failed to get output buffer: {e}")
+                continue
+
+            # Handle dict or array output
+            if isinstance(output_buffers, dict):
+                out = list(output_buffers.values())[0]
+            else:
+                out = output_buffers
+
+            # Convert to float32 flat vector
+            logits = out.flatten().astype(np.float32)
+
+            # Softmax
+            exp_scores = np.exp(logits - np.max(logits))
+            probs = exp_scores / np.sum(exp_scores)
+
+            # Top-5
+            top5_idx = probs.argsort()[-5:][::-1]
+            top1_idx = int(top5_idx[0])
+            top1_conf = float(probs[top1_idx] * 100.0)
+
+            # Map class ID → label
+            pred_label = self.class_names.get(top1_idx, f"class_{top1_idx}")
+
+            # Log prediction
+            self.logger.info(
+                f"[HAILO] Pred: {pred_label} ({top1_conf:.2f}%) | Top5: {top5_idx.tolist()}"
+            )
+
+
+    def submit_batch(self, frames: List[np.ndarray], metas: List[Dict]):
         batch_id = str(uuid.uuid4())
         batch_meta = {
             "batch_id": batch_id,
@@ -65,9 +113,9 @@ class HailoWrapper:
         try:
             if self.model:
                 try:
-                    self.model.run_async(frames, callback_fn, metadata=batch_meta)
+                    self.model.run_async(frames, self.inference_callback, metadata=batch_meta)
                 except TypeError:
-                    self.model.run_async(frames, callback_fn)
+                    self.model.run_async(frames, self.inference_callback)
             else:
                 def _mock_job():
                     time.sleep(0.02 + 0.005 * len(frames))
@@ -78,7 +126,7 @@ class HailoWrapper:
                         }
                         for i in range(len(frames))
                     ]
-                    callback_fn(bindings_list, batch_meta)
+                    self.inference_callback(bindings_list, batch_meta)
 
                 import threading
                 threading.Thread(target=_mock_job, daemon=True).start()
