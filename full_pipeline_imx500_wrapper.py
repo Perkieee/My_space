@@ -16,15 +16,20 @@ class IMX500Wrapper:
         self.variances = variances
         self.score_thresh = score_thresh
         self.nms_thresh = nms_thresh
+        self.model = self.load_model()
 
+    def load_model(self):
         if IMX500 is not None:
             try:
-                self.model = IMX500(model_path)
+                model = IMX500(self.model_path)
             except Exception as e:
                 logging.warning("Failed to instantiate IMX500: %s", e)
-                self.model = None
+                model = None
         else:
-            self.model = None
+            model = None
+        return model
+    
+        
 
     def load_priors(self, path: str):
         priors = np.load(path)
