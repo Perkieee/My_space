@@ -43,10 +43,10 @@ class IMX500Wrapper:
         decoded_w = np.exp(dw * variances[1]) * pw
         decoded_h = np.exp(dh * variances[1]) * ph
 
-        xmin = decoded_cx - decoded_w / 2
-        ymin = decoded_cy - decoded_h / 2
-        xmax = decoded_cx + decoded_w / 2
-        ymax = decoded_cy + decoded_h / 2
+        xmin = decoded_cx - decoded_w / 2.0
+        ymin = decoded_cy - decoded_h / 2.0
+        xmax = decoded_cx + decoded_w / 2.0
+        ymax = decoded_cy + decoded_h / 2.0
 
         return np.clip(np.stack([xmin, ymin, xmax, ymax], axis=1), 0.0, 1.0)
 
