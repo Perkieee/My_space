@@ -9,7 +9,7 @@ class Config:
     score_thresh: float = 0.6
     nms_iou_thresh: float = 0.45
     variances: Tuple[float, float] = (0.1, 0.2)
-    class_name: str = "banana"
+    class_name: str = "/path_to_labels_json"
 
     hef_path: str = "/path_to.hef"
     hailo_batch_size: int = 16
